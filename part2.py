@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import itertools
+import pandas as pd
 
 
 class Rectangle:
@@ -107,3 +108,41 @@ check_rectangle_in_color_image(1006, 252, 966.0, 246.0, 1038.0, 291.0)  # the in
 check_rectangle_in_color_image(1006, 252, 955.0, 309.0, 1018.0, 348.0)  # the rectangle outside the traffic light totally
 check_rectangle_in_color_image(1006, 252, 997.0, 239.0, 1012.0, 268.0)  # I'm traffic light
 
+
+def crop_images():
+    return "cbla"
+
+
+def write_to_new_table(number: int, x, y, x0, y0, x1, y1, original_path: str, color: str):
+    new_table = pd.DataFrame(columns=['seq',  'is_true', 'is_ignore', 'crop_path', 'original_path', 'x0', 'x1', 'y0', 'y1', 'col'])
+    print(new_table)
+    is_true = False
+    is_ignore = False
+    if check_rectangle_in_color_image(x, y, x0, y0, x1, y1) == 0:  # false
+        is_true = False
+        is_ignore = False
+    elif check_rectangle_in_color_image(x, y, x0, y0, x1, y1) == 1:  # true
+        is_true = True
+        is_ignore = False
+    elif check_rectangle_in_color_image(x, y, x0, y0, x1, y1) == 2:  # ignore
+        is_true = False
+        is_ignore = True
+    crop_path = crop_images()
+    new_table = new_table.append({'seq': number, 'is_true': is_true, 'is_ignore': is_ignore, 'crop_path': crop_path,
+                                  'original_path': original_path, 'x0': x0, 'x1': x1, 'y0': y0, 'y1': y1, 'col': color},
+                                 ignore_index=True)
+    new_table.to_hdf('new_table.h5', key='new_table', mode='w')
+
+
+write_to_new_table(number=0, x=1006, y=252, x0=997.0, y0=239.0, x1=1012.0, y1=268.0, original_path="bla", color='r')
+
+def pass_all_old_table():
+    table = pd.read_hdf("attention_results.h5")
+    # pd.set_option("display.max_rows", None)  # display all the rows of the table
+    print(table)
+    for i in range(len(table)):
+        print(i, end=' ')
+
+
+
+pass_all_old_table()
