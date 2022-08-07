@@ -1,13 +1,12 @@
 try:
-    import cv2
     import os
     import json
     import glob
     import argparse
-    import sys
+
     import numpy as np
     from scipy import signal as sg
-    from scipy.ndimage import convolve, maximum_filter
+    from scipy.ndimage.filters import maximum_filter
 
     from PIL import Image
 
@@ -55,20 +54,12 @@ def test_find_tfl_lights(image_path, json_path=None, fig_num=None):
         what = ['traffic light']
         objects = [o for o in gt_data['objects'] if o['label'] in what]
 
-    plt.figure(56)
-    plt.clf()
-    h = plt.subplot(111)
-    plt.imshow(image)
-    plt.figure(57)
-    plt.clf()
-    plt.subplot(111, sharex=h, sharey=h)
-    plt.imshow(image)
-
-    # show_image_and_gt(image, objects, fig_num)
+    show_image_and_gt(image, objects, fig_num)
 
     red_x, red_y, green_x, green_y = find_tfl_lights(image)
     plt.plot(red_x, red_y, 'ro', color='r', markersize=4)
     plt.plot(green_x, green_y, 'ro', color='g', markersize=4)
+
 
 
 def main(argv=None):
@@ -82,7 +73,7 @@ def main(argv=None):
     parser.add_argument("-j", "--json", type=str, help="Path to json GT for comparison")
     parser.add_argument('-d', '--dir', type=str, help='Directory to scan images in')
     args = parser.parse_args(argv)
-    default_base = r"..\berlin"
+    default_base = "INSERT_YOUR_DIR_WITH_PNG_AND_JSON_HERE"
 
     if args.dir is None:
         args.dir = default_base
