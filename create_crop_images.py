@@ -114,9 +114,9 @@ def get_traffic_light_rectangle(center_x: float, center_y: float, zoom: float, i
     :param zoom: The zoom that done to the image to find this point.
     :return: Top left point and button right point of a rectangle.
     """
-    if is_green: # Michal G, Put your code here
-        top_left_offset = {0.5: (-5, -5), 0.25: (-12, -19), 0.125: (-10, -14), 0.0625: (-20, -32)}
-        bottom_right_offset = {0.5: (5, 19), 0.25: (28, 88), 0.125: (22, 78), 0.0625: (53, 136)}
+    if is_green:
+        top_left_offset = {0.5: (-9, -41), 0.25: (-17, -91), 0.125: (-17, -105), 0.0625: (-17, -105)}
+        bottom_right_offset = {0.5: (8, 5), 0.25: (19, 15), 0.125: (23, 13), 0.0625: (23, 13)}
     else:
         top_left_offset = {0.5: (-5, -5), 0.25: (-12, -19), 0.125: (-10, -14), 0.0625: (-20, -32)}
         bottom_right_offset = {0.5: (5, 19), 0.25: (28, 88), 0.125: (22, 78), 0.0625: (53, 136)}
@@ -170,7 +170,7 @@ def main_crop_image(image_path: str, image_df: pd.DataFrame, new_table: pd.DataF
         top_left_x, top_left_y, bottom_right_x, bottom_right_y = \
             get_traffic_light_rectangle(row['x'], row['y'], row['zoom'], is_green, height, width)
         write_to_new_table(row_num, row['x'], row['y'], top_left_x, top_left_y, bottom_right_x, bottom_right_y,
-                           image_path, row['col'], new_table, row['col'] == 'g')
+                           image_path, row['col'], new_table, is_green)
         # top_left_x, top_left_y, bottom_right_x, bottom_right_y = \
         #     get_red_traffic_light_rectangle(row['x'], row['y'], row['zoom']) if row['col'] == 'r' else (0, 0, 0, 0) # get_green_traffic_light_rectangle(row['x'], row['y'], row['zoom'])
         # write_to_new_table(row_num, row['x'], row['y'], top_left_x, top_left_y, bottom_right_x, bottom_right_y,
@@ -179,15 +179,17 @@ def main_crop_image(image_path: str, image_df: pd.DataFrame, new_table: pd.DataF
 
 
 if __name__ == '__main__':
-    image_path = "dusseldorf_000068_000019_leftImg8bit.png"
+    image_path = "ulm_000024_000019_leftImg8bit.png"
     df = pd.read_hdf("attention_results.h5")
     print(type(df))
     pd.set_option('display.max_rows', None)
     # print(df.loc[df["col"] == "r"])
-    picture_df = df.loc[(df["col"] == "r") & (df["path"] == image_path)]
-    print(df.loc[(df["col"] == "r") & (df["zoom"] == 0.0625)])
+    picture_df = df.loc[(df["col"] == "g") & (df["path"] == image_path)]
+    print(df.loc[(df["col"] == "g") & (df['zoom'] == 0.0625)])
     print(picture_df)
     image = Image.open(image_path)
+    print(type(image))
+    # height, width, _ = image
     # plt.imshow(image)
     # plt.show()
     for index, row in picture_df.iterrows():
@@ -207,7 +209,7 @@ if __name__ == '__main__':
         plt.clf()
         plt.subplot(111, sharex=h, sharey=h)
         plt.imshow(image)
-        red_x, red_y, green_x, green_y = get_traffic_light_rectangle(row['x'], row['y'], row['zoom'])
+        red_x, red_y, green_x, green_y = get_traffic_light_rectangle(row['x'], row['y'], row['zoom'], True, image.height, image.width)
         plt.plot(red_x, red_y, 'ro', color='r', markersize=4)
         plt.plot(green_x, green_y, 'ro', color='g', markersize=4)
         plt.show()
