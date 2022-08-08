@@ -8,7 +8,6 @@ from PIL import Image
 
 
 
-
 class Rectangle:
     def intersection(self, other):
         a, b = self, other
@@ -26,10 +25,43 @@ class Rectangle:
         self.x1, self.y1, self.x2, self.y2 = x1, y1, x2, y2
 
 
+def find_orange_rectangle_boundaries(picture, candidate_x, candidate_y, up_boundary_y, down_boundary_y,
+                                     left_boundary_x, right_boundary_x, orange_color):
+    """
+    The function find the boundaries of the orange rectangle.
+    :param picture: The picture of the color image.
+    :param candidate_x: The x of the point that we check.
+    :param candidate_y: The y of the point that we check.
+    :param up_boundary_y: The y up boundary point of the orange rectangle.
+    :param down_boundary_y: The y down boundary point of the orange rectangle.
+    :param left_boundary_x: The x left boundary point of the orange rectangle.
+    :param right_boundary_x: The right x boundary point of the orange rectangle.
+    :param orange_color: The values of the orange color on the image.
+    :return: The end values of the up_boundary_y, down_boundary_y, left_boundary_x, right_boundary_x.
+    """
+    while up_boundary_y > 0 and (picture[up_boundary_y][candidate_x] == orange_color).all():
+        up_boundary_y -= 1
+    while down_boundary_y < picture.shape[0] and (picture[down_boundary_y][candidate_x] == orange_color).all():
+        down_boundary_y += 1
+    while left_boundary_x > 0 and (picture[candidate_y][left_boundary_x] == orange_color).all():
+        left_boundary_x -= 1
+    while right_boundary_x < picture.shape[1] and (picture[candidate_y][right_boundary_x] == orange_color).all():
+        right_boundary_x += 1
+    return up_boundary_y, down_boundary_y, left_boundary_x, right_boundary_x
+
+
 def check_rectangle_in_color_image(candidate_x: int, candidate_y: int, top_left_x: float, top_left_y: float,
                                    bottom_right_x: float, bottom_right_y: float, image_path: str) -> int:
     """
-
+    The function get the x,y candidate for traffic light and check with the color image if it is really traffic light.
+    :param candidate_x: The x of the point that we check.
+    :param candidate_y: The y of the point that we check.
+    :param top_left_x: The top left x point of the rectangle of the traffic light.
+    :param top_left_y: The top left y point of the rectangle of the traffic light.
+    :param bottom_right_x: The bottom right x point of the rectangle of the traffic light.
+    :param bottom_right_y: The bottom right y point of the rectangle of the traffic light.
+    :param image_path: The path of the color image.
+    :return: 0 if not traffic light, 1 if it is, and 2 if ignore.
     """
     orange_color = np.array([0.98039216, 0.6666667, 0.11764706, 1.], dtype='float32')
     candidate_y = int(candidate_y)
@@ -48,15 +80,10 @@ def check_rectangle_in_color_image(candidate_x: int, candidate_y: int, top_left_
     if not (picture[candidate_y][candidate_x] == orange_color).all():
         # print("not traffic light")  # false
         return 0
-    else:  # finds the bounders of the orange rectangle
-        while up_boundary_y >= 0 and (picture[up_boundary_y][candidate_x] == orange_color).all():
-            up_boundary_y -= 1
-        while (picture[down_boundary_y][candidate_x] == orange_color).all():
-            down_boundary_y += 1
-        while left_boundary_x >= 0 and (picture[candidate_y][left_boundary_x] == orange_color).all():
-            left_boundary_x -= 1
-        while (picture[candidate_y][right_boundary_x] == orange_color).all():
-            right_boundary_x += 1
+    else:  # finds the boundaries of the orange rectangle
+        up_boundary_y, down_boundary_y, left_boundary_x, right_boundary_x = \
+            find_orange_rectangle_boundaries(picture, candidate_x, candidate_y, up_boundary_y, down_boundary_y,
+                                             left_boundary_x, right_boundary_x, orange_color)
         orange_rectangle_area = (down_boundary_y - up_boundary_y) * (right_boundary_x - left_boundary_x)
         orange_rectangle = Rectangle(left_boundary_x, up_boundary_y, right_boundary_x, down_boundary_y)
         crop_rectangle = Rectangle(top_left_x, top_left_y, bottom_right_x, bottom_right_y)
@@ -67,10 +94,13 @@ def check_rectangle_in_color_image(candidate_x: int, candidate_y: int, top_left_
         else:
             intersection_rectangle_area = (intersection.x2 - intersection.x1) * (intersection.y2 - intersection.y1)
             given_rectangle_area = (bottom_right_x - top_left_x) * (bottom_right_y - top_left_y)
-            if intersection_rectangle_area / orange_rectangle_area < 0.5:
+            if intersection_rectangle_area / orange_rectangle_area < 0.1 or\
+                    intersection_rectangle_area / given_rectangle_area < 0.1:
+                return 0
+            if 0.75 > intersection_rectangle_area / orange_rectangle_area > 0.1:
                 # print("The intersection with the orange rectangle too little")  # ignore
                 return 2
-            elif intersection_rectangle_area / given_rectangle_area < 0.5:
+            elif 0.75 > intersection_rectangle_area / given_rectangle_area > 0.1:
                 # print("The intersection with the given rectangle too little")  # ignore
                 return 2
             else:
