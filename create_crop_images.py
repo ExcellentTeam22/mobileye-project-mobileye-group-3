@@ -1,3 +1,5 @@
+import re
+
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -27,6 +29,7 @@ class Rectangle:
 def check_rectangle_in_color_image(candidate_x: int, candidate_y: int, top_left_x: float, top_left_y: float,
                                    bottom_right_x: float, bottom_right_y: float, image_path: str) -> int:
     """
+
     """
     orange_color = np.array([0.98039216, 0.6666667, 0.11764706, 1.], dtype='float32')
     candidate_y = int(candidate_y)
@@ -42,7 +45,7 @@ def check_rectangle_in_color_image(candidate_x: int, candidate_y: int, top_left_
     picture = plt.imread(colored_path)
     # plt.imshow(picture)
     # plt.show()
-    if not (picture[int(candidate_y)][int(candidate_x)] == orange_color).all():
+    if not (picture[candidate_y][candidate_x] == orange_color).all():
         # print("not traffic light")  # false
         return 0
     else:  # finds the bounders of the orange rectangle
@@ -92,11 +95,10 @@ def crop_images(top_left_x:int, top_left_y:int, bottom_right_x:int, bottom_right
         """
     img = cv2.imread(image_path)
     crop_img = img[int(top_left_y):int(bottom_right_y), int(top_left_x):int(bottom_right_x)]
-    cropped_image_name = r"..\\cropped_images\\" + image_path.split("left")[0]
-    cropped_image_name += (r'gT_00000.png' if is_traffic_light else r'gF_00001.png') if is_green else \
-        (r'rT_00000.png' if is_traffic_light else r'rF_00001.png')
-    if not cv2.imwrite(fr"{cropped_image_name}", crop_img):
-        raise Exception("wlefn")
+    cropped_image_name = "..\\cropped_images\\" + re.search(r"([^\\]+)leftImg8bit.png$", image_path).group(1)
+    cropped_image_name += ('gT_00000.png' if is_traffic_light else 'gF_00001.png') if is_green else \
+        ('rT_00000.png' if is_traffic_light else 'rF_00001.png')
+    cv2.imwrite(fr"{cropped_image_name}", crop_img)
     return cropped_image_name
 
 
@@ -136,7 +138,7 @@ def write_to_new_table(number: int, x, y, top_left_x, top_left_y, bottom_right_x
                                      top_left_y, bottom_right_y, color]
 
 
-def main_crop_image(image_path: str, image_df: pd.DataFrame, new_table:pd.DataFrame) -> None:
+def main_crop_image(image_path: str, image_df: pd.DataFrame, new_table: pd.DataFrame) -> None:
     row_num = 0
     for index, row in image_df.iterrows():
         if row['col'] == 'r':

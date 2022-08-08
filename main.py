@@ -98,7 +98,6 @@ def main(argv=None):
         if not os.path.exists(json_fn):
             json_fn = None
         # test_find_tfl_lights(image, json_fn)
-
         main_crop_image(image, df.loc[df["path"] == re.search(r"([^\\]+\.png)$", image).group(0)], new_table)
         # colored = image.replace('_leftImg8bit', '_gtFine_color')
         # colored = colored.replace('leftImg8bit_trainvaltest', 'gtFine')
