@@ -98,6 +98,7 @@ def crop_images(top_left_x: int, top_left_y: int, bottom_right_x: int, bottom_ri
     cropped_image_name = "..\\cropped_images\\" + re.search(r"([^\\]+)leftImg8bit.png$", image_path).group(1)
     cropped_image_name += (('gT' if is_traffic_light else 'gF') if is_green else ('rT' if is_traffic_light else 'rF')) \
                           + "_" + number_str + ".png"
+    crop_img = cv2.resize(crop_img, dsize=(54, 140), interpolation=cv2.INTER_CUBIC)
     # resized_image = crop_img.resize
     cv2.imwrite(fr"{cropped_image_name}", crop_img)
     return cropped_image_name
