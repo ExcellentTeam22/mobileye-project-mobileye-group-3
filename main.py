@@ -1,13 +1,20 @@
+
+
+
+
 try:
-    import cv2
+    from create_crop_images import main_crop_image
     import os
     import json
     import glob
     import argparse
-    import sys
+
     import numpy as np
+    import pandas as pd
+    from pathlib import Path
+    import re
     from scipy import signal as sg
-    from scipy.ndimage import convolve, maximum_filter
+    from scipy.ndimage import maximum_filter
 
     from PIL import Image
 
@@ -55,20 +62,12 @@ def test_find_tfl_lights(image_path, json_path=None, fig_num=None):
         what = ['traffic light']
         objects = [o for o in gt_data['objects'] if o['label'] in what]
 
-    plt.figure(56)
-    plt.clf()
-    h = plt.subplot(111)
-    plt.imshow(image)
-    plt.figure(57)
-    plt.clf()
-    plt.subplot(111, sharex=h, sharey=h)
-    plt.imshow(image)
-
-    # show_image_and_gt(image, objects, fig_num)
+    show_image_and_gt(image, objects, fig_num)
 
     red_x, red_y, green_x, green_y = find_tfl_lights(image)
     plt.plot(red_x, red_y, 'ro', color='r', markersize=4)
     plt.plot(green_x, green_y, 'ro', color='g', markersize=4)
+
 
 
 def main(argv=None):
@@ -82,25 +81,43 @@ def main(argv=None):
     parser.add_argument("-j", "--json", type=str, help="Path to json GT for comparison")
     parser.add_argument('-d', '--dir', type=str, help='Directory to scan images in')
     args = parser.parse_args(argv)
-    default_base = r"..\berlin"
+    Path(r"..\cropped_images").mkdir(parents=True, exist_ok=True)
+    df = pd.read_hdf("attention_results.h5")
+    default_base = r"..\traffic_lights\leftImg8bit_trainvaltest\train\aachen"
+    new_table = pd.DataFrame(columns=['seq', 'is_true', 'is_ignore', 'crop_path', 'original_path',
+                                      'x0', 'x1', 'y0', 'y1', 'col'])
 
     if args.dir is None:
-        args.dir = default_base
-    flist = glob.glob(os.path.join(args.dir, '*_leftImg8bit.png'))
-
+       args.dir = default_base
+    flist = [os.path.join(root, file) for root, dirs, files in os.walk(args.dir) for file in files
+             if file.endswith("_leftImg8bit.png")]
+    # flist = glob.glob(os.path.join(args.dir, '*_leftImg8bit.png'))
     for image in flist:
         json_fn = image.replace('_leftImg8bit.png', '_gtFine_polygons.json')
 
         if not os.path.exists(json_fn):
             json_fn = None
-        test_find_tfl_lights(image, json_fn)
-
-    if len(flist):
-        print("You should now see some images, with the ground truth marked on them. Close all to quit.")
-    else:
-        print("Bad configuration?? Didn't find any picture to show")
-    plt.show(block=True)
+        # test_find_tfl_lights(image, json_fn)
+        main_crop_image(image, df.loc[df["path"] == re.search(r"([^\\]+\.png)$", image).group(0)], new_table)
+        # colored = image.replace('_leftImg8bit', '_gtFine_color')
+        # colored = colored.replace('leftImg8bit_trainvaltest', 'gtFine')
+        # print(colored)
+        #
+        # image = np.array(Image.open(colored))
+        # plt.imshow(image)
+        # plt.show()
+        # match = re.search(r"([^\\]+\.png)$", image)
+        # print(match.group(0))
+    new_table.to_hdf('new_table.h5', key='new_table', mode='w')
+    # if len(flist):
+    #    print("You should now see some images, with the ground truth marked on them. Close all to quit.")
+    # else:
+    #     print("Bad configuration?? Didn't find any picture to show")
+    # plt.show(block=True)
 
 
 if __name__ == '__main__':
     main()
+    df = pd.read_hdf("new_table.h5")
+    pd.set_option('display.max_rows', None)
+    print(df)
