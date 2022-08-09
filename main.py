@@ -92,6 +92,7 @@ def main(argv=None):
     flist = [os.path.join(root, file) for root, dirs, files in os.walk(args.dir) for file in files
              if file.endswith("_leftImg8bit.png")]
     # flist = glob.glob(os.path.join(args.dir, '*_leftImg8bit.png'))
+    # flist =
     for image in flist:
         json_fn = image.replace('_leftImg8bit.png', '_gtFine_polygons.json')
 
@@ -119,5 +120,5 @@ def main(argv=None):
 if __name__ == '__main__':
     main()
     df = pd.read_hdf("new_table.h5")
-    pd.set_option('display.max_rows', None)
+    pd.set_option('display.width', 200, 'display.max_rows', None, 'display.max_columns', 200, 'max_colwidth', 100)
     print(df)

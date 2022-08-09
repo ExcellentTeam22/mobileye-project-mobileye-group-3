@@ -7,8 +7,6 @@ import pandas as pd
 from PIL import Image
 
 
-
-
 class Rectangle:
     def intersection(self, other):
         a, b = self, other
@@ -78,31 +76,36 @@ def check_rectangle_in_color_image(candidate_x: int, candidate_y: int, top_left_
                 return 1
 
 
-def crop_images(top_left_x:int, top_left_y:int, bottom_right_x:int, bottom_right_y:int, image_path: str, is_green: bool,
-                is_traffic_light: bool):
+def crop_images(top_left_x: int, top_left_y: int, bottom_right_x: int, bottom_right_y: int, image_path: str,
+                is_green: bool, is_traffic_light: bool, number: int) -> str:
+    """Cropping a rectangle which suspected as traffic light from am image.
+    Consider (top_left_x,top_left_y) as the top-left vertex
+    and (bottom_right_x,bottom_right_y) as the bottom-right vertex of a rectangle region within an image.
+    :param top_left_x: X coordinate of top left vertex.
+    :param top_left_y: Y coordinate of top left vertex.
+    :param bottom_right_x: X coordinate of bottom right vertex.
+    :param bottom_right_y: Y coordinate of bottom right vertex.
+    :param image_path: The path to the wanted image
+    :param is_green: True = green, False = Red
+    :param is_traffic_light: True = Is traffic light, False = Not traffic light
+    :param number: For cropped image number.
+    :return: Cropped image path.
     """
-        Cropping a rectangle which suspected as traffic light from am image.
-        Consider (top_left_x,top_left_y) as the top-left vertex
-        and (bottom_right_x,bottom_right_y) as the bottom-right vertex of a rectangle region within an image.
-        Arguments:
-            (top_left_x, top_left_y): Top-left vertex
-            (bottom_right_x, bottom_right_y): Bottom-right vertex
-            image_path: The path to the wanted image
-            is_green: True = green, False = Red
-            is_traffic_light: True = Is traffic light, False = Not traffic light
-        Returns:
-            none
-        """
+
     img = cv2.imread(image_path)
+    number_str = "0" * (5 - len(str(number))) + str(number)
     crop_img = img[int(top_left_y):int(bottom_right_y), int(top_left_x):int(bottom_right_x)]
     cropped_image_name = "..\\cropped_images\\" + re.search(r"([^\\]+)leftImg8bit.png$", image_path).group(1)
-    cropped_image_name += ('gT_00000.png' if is_traffic_light else 'gF_00001.png') if is_green else \
-        ('rT_00000.png' if is_traffic_light else 'rF_00001.png')
+    cropped_image_name += (('gT' if is_traffic_light else 'gF') if is_green else ('rT' if is_traffic_light else 'rF')) \
+                          + "_" + number_str + ".png"
+    crop_img = cv2.resize(crop_img, dsize=(54, 140), interpolation=cv2.INTER_CUBIC)
+    # resized_image = crop_img.resize
     cv2.imwrite(fr"{cropped_image_name}", crop_img)
     return cropped_image_name
 
 
-def get_red_traffic_light_rectangle(center_x: float, center_y: float, zoom: float) -> \
+def get_traffic_light_rectangle(center_x: float, center_y: float, zoom: float, is_green: bool,
+                                height: int, width: int) -> \
         (int, int, int, int):
     """ Receive the point of red light that has been found and the zoom. Return two points of a rectangle where the
     traffic light should be in the picture.
@@ -111,8 +114,12 @@ def get_red_traffic_light_rectangle(center_x: float, center_y: float, zoom: floa
     :param zoom: The zoom that done to the image to find this point.
     :return: Top left point and button right point of a rectangle.
     """
-    top_left_offset = {0.5: (-5, -5), 0.25: (-12, -19), 0.125: (-10, -14), 0.0625: (-20, -32)}
-    bottom_right_offset = {0.5: (5, 19), 0.25: (28, 88), 0.125: (22, 78), 0.0625: (53, 136)}
+    if is_green:
+        top_left_offset = {0.5: (-9, -41), 0.25: (-17, -91), 0.125: (-17, -105), 0.0625: (-17, -105)}
+        bottom_right_offset = {0.5: (8, 5), 0.25: (19, 15), 0.125: (23, 13), 0.0625: (23, 13)}
+    else:
+        top_left_offset = {0.5: (-5, -5), 0.25: (-12, -19), 0.125: (-10, -14), 0.0625: (-20, -32)}
+        bottom_right_offset = {0.5: (5, 19), 0.25: (28, 88), 0.125: (22, 78), 0.0625: (53, 136)}
     value = top_left_offset.get(zoom)
     steps_to_top_left = value if value else (0, 0)
     value = bottom_right_offset.get(zoom)
@@ -120,32 +127,50 @@ def get_red_traffic_light_rectangle(center_x: float, center_y: float, zoom: floa
     top_left_x = max(center_x + steps_to_top_left[0], 0)
     top_left_y = max(center_y + steps_to_top_left[1], 0)
     # We should put here minimum between this result and the size of the picture.
-    bottom_right_x = center_x + steps_to_bottom_right[0]
-    bottom_right_y = center_y + steps_to_bottom_right[1]
+    bottom_right_x = min(center_x + steps_to_bottom_right[0], width)
+    bottom_right_y = min(center_y + steps_to_bottom_right[1], height)
 
-    return top_left_x, top_left_y, bottom_right_x, bottom_right_y
+    return int(top_left_x), int(top_left_y), int(bottom_right_x), int(bottom_right_y)
 
 
-def write_to_new_table(number: int, x, y, top_left_x, top_left_y, bottom_right_x, bottom_right_y, original_path: str,
-                       color: str, new_table: pd.DataFrame, is_green: bool) -> None:
+def write_to_new_table(number: int, x: int, y: int, top_left_x: int, top_left_y: int, bottom_right_x: int,
+                       bottom_right_y: int, original_path: str, color: str, new_table: pd.DataFrame,
+                       is_green: bool) -> None:
+    """ Write new row to the new table. The row include details about the cropped image.
+    :param number: Row's index.
+    :param x: X center.
+    :param y: Y center.
+    :param top_left_x: X coordinate of top left vertex.
+    :param top_left_y: Y coordinate of top left vertex.
+    :param bottom_right_x: X coordinate of bottom right vertex.
+    :param bottom_right_y: Y coordinate of bottom right vertex.
+    :param original_path: Image's path.
+    :param color: The color of the traffic light.
+    :param new_table: The table that we should add it a new row.
+    :param is_green:
+    :return: None
+    """
 
     rectangle_type_result = check_rectangle_in_color_image(x, y, top_left_x, top_left_y, bottom_right_x,
                                                            bottom_right_y, original_path)
     is_true = True if rectangle_type_result == 1 else False
     is_ignore = True if rectangle_type_result == 2 else False
-    crop_path = crop_images(top_left_x, top_left_y, bottom_right_x, bottom_right_y, original_path, is_green, is_true)
+    crop_path = crop_images(top_left_x, top_left_y, bottom_right_x, bottom_right_y, original_path, is_green, is_true,
+                            number)
     new_table.loc[len(new_table)] = [number, is_true, is_ignore, crop_path, original_path, top_left_x, bottom_right_x,
                                      top_left_y, bottom_right_y, color]
 
 
 def main_crop_image(image_path: str, image_df: pd.DataFrame, new_table: pd.DataFrame) -> None:
     row_num = 0
-    for index, row in image_df.iterrows():
-        if row['col'] == 'r':
-            top_left_x, top_left_y, bottom_right_x, bottom_right_y = \
-                get_red_traffic_light_rectangle(row['x'], row['y'], row['zoom'])
-            write_to_new_table(row_num, row['x'], row['y'], top_left_x, top_left_y, bottom_right_x, bottom_right_y,
-                               image_path, row['col'], new_table, row['col'] == 'g')
+    image = cv2.imread(image_path)
+    height, width, _ = image.shape
+    for _, row in image_df.iterrows():
+        is_green = row['col'] == 'g'
+        top_left_x, top_left_y, bottom_right_x, bottom_right_y = \
+            get_traffic_light_rectangle(row['x'], row['y'], row['zoom'], is_green, height, width)
+        write_to_new_table(row_num, row['x'], row['y'], top_left_x, top_left_y, bottom_right_x, bottom_right_y,
+                           image_path, row['col'], new_table, is_green)
         # top_left_x, top_left_y, bottom_right_x, bottom_right_y = \
         #     get_red_traffic_light_rectangle(row['x'], row['y'], row['zoom']) if row['col'] == 'r' else (0, 0, 0, 0) # get_green_traffic_light_rectangle(row['x'], row['y'], row['zoom'])
         # write_to_new_table(row_num, row['x'], row['y'], top_left_x, top_left_y, bottom_right_x, bottom_right_y,
@@ -154,15 +179,17 @@ def main_crop_image(image_path: str, image_df: pd.DataFrame, new_table: pd.DataF
 
 
 if __name__ == '__main__':
-    image_path = "dusseldorf_000068_000019_leftImg8bit.png"
+    image_path = "ulm_000024_000019_leftImg8bit.png"
     df = pd.read_hdf("attention_results.h5")
     print(type(df))
     pd.set_option('display.max_rows', None)
     # print(df.loc[df["col"] == "r"])
-    picture_df = df.loc[(df["col"] == "r") & (df["path"] == image_path)]
-    print(df.loc[(df["col"] == "r") & (df["zoom"] == 0.0625)])
+    picture_df = df.loc[(df["col"] == "g") & (df["path"] == image_path)]
+    print(df.loc[(df["col"] == "g") & (df['zoom'] == 0.0625)])
     print(picture_df)
     image = Image.open(image_path)
+    print(type(image))
+    # height, width, _ = image
     # plt.imshow(image)
     # plt.show()
     for index, row in picture_df.iterrows():
@@ -182,7 +209,7 @@ if __name__ == '__main__':
         plt.clf()
         plt.subplot(111, sharex=h, sharey=h)
         plt.imshow(image)
-        red_x, red_y, green_x, green_y = get_red_traffic_light_rectangle(row['x'], row['y'], row['zoom'])
+        red_x, red_y, green_x, green_y = get_traffic_light_rectangle(row['x'], row['y'], row['zoom'], True, image.height, image.width)
         plt.plot(red_x, red_y, 'ro', color='r', markersize=4)
         plt.plot(green_x, green_y, 'ro', color='g', markersize=4)
         plt.show()
