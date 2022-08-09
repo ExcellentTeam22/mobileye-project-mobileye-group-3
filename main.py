@@ -83,7 +83,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     Path(r"..\cropped_images").mkdir(parents=True, exist_ok=True)
     df = pd.read_hdf("attention_results.h5")
-    default_base = r"..\traffic_lights\leftImg8bit_trainvaltest\train"
+    default_base = r"..\traffic_lights_2\leftImg8bit_trainvaltest\train"
     new_table = pd.DataFrame(columns=['seq', 'is_true', 'is_ignore', 'crop_path', 'original_path',
                                       'x0', 'x1', 'y0', 'y1', 'col'])
 

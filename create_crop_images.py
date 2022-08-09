@@ -189,7 +189,10 @@ def main_crop_image(image_path: str, image_df: pd.DataFrame, new_table: pd.DataF
     row_num = 0
     image = cv2.imread(image_path)
     height, width, _ = image.shape
+    image_df = image_df.dropna()
     for _, row in image_df.iterrows():
+        if row['x'] == 'NaN' or row['y'] == 'NaN':
+            continue
         is_green = row['col'] == 'g'
         top_left_x, top_left_y, bottom_right_x, bottom_right_y = \
             get_traffic_light_rectangle(row['x'], row['y'], row['zoom'], is_green, height, width)
