@@ -1,4 +1,5 @@
 import re
+import consts
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -69,41 +70,34 @@ def check_rectangle_in_color_image(candidate_x: int, candidate_y: int, top_left_
 
     left_boundary_x = candidate_x
     right_boundary_x = candidate_x
-    colored_path = image_path.replace('_leftImg8bit', '_gtFine_color')
-    colored_path = colored_path.replace('leftImg8bit_trainvaltest', 'gtFine')
-    # picture = plt.imread(r"aachen_000008_000019_gtFine_color.png")
+    colored_path = image_path.replace(consts.ORIGINAL_IMAGE_SUFFIX, consts.COLORED_IMAGE_SUFFIX)
+    colored_path = colored_path.replace(consts.ORIGINAL_IMAGES_DIRECTORY, consts.COLORED_IMAGES_DIRECTORY)
     picture = plt.imread(colored_path)
-    # plt.imshow(picture)
-    # plt.show()
     if not (picture[candidate_y][candidate_x] == orange_color).all():
-        # print("not traffic light")  # false
         return 0
-    else:  # finds the boundaries of the orange rectangle
-        up_boundary_y, down_boundary_y, left_boundary_x, right_boundary_x = \
-            find_orange_rectangle_boundaries(picture, candidate_x, candidate_y, up_boundary_y, down_boundary_y,
-                                             left_boundary_x, right_boundary_x, orange_color)
-        orange_rectangle_area = (down_boundary_y - up_boundary_y) * (right_boundary_x - left_boundary_x)
-        orange_rectangle = Rectangle(left_boundary_x, up_boundary_y, right_boundary_x, down_boundary_y)
-        crop_rectangle = Rectangle(top_left_x, top_left_y, bottom_right_x, bottom_right_y)
-        intersection = orange_rectangle & crop_rectangle
-        if intersection is None:
-            # print("The rectangle outside the traffic light totally")  # ignore
-            return 0
-        else:
-            intersection_rectangle_area = (intersection.x2 - intersection.x1) * (intersection.y2 - intersection.y1)
-            given_rectangle_area = (bottom_right_x - top_left_x) * (bottom_right_y - top_left_y)
-            if intersection_rectangle_area / orange_rectangle_area < 0.1 or\
-                    intersection_rectangle_area / given_rectangle_area < 0.1:
-                return 0
-            if 0.75 > intersection_rectangle_area / orange_rectangle_area > 0.1:
-                # print("The intersection with the orange rectangle too little")  # ignore
-                return 2
-            elif 0.75 > intersection_rectangle_area / given_rectangle_area > 0.1:
-                # print("The intersection with the given rectangle too little")  # ignore
-                return 2
-            else:
-                # print("I'm traffic light")  # true
-                return 1
+    # finds the boundaries of the orange rectangle
+    up_boundary_y, down_boundary_y, left_boundary_x, right_boundary_x = \
+        find_orange_rectangle_boundaries(picture, candidate_x, candidate_y, up_boundary_y, down_boundary_y,
+                                         left_boundary_x, right_boundary_x, orange_color)
+    orange_rectangle_area = (down_boundary_y - up_boundary_y) * (right_boundary_x - left_boundary_x)
+    orange_rectangle = Rectangle(left_boundary_x, up_boundary_y, right_boundary_x, down_boundary_y)
+    crop_rectangle = Rectangle(top_left_x, top_left_y, bottom_right_x, bottom_right_y)
+    intersection = orange_rectangle & crop_rectangle
+    if intersection is None:
+        return 0
+    intersection_rectangle_area = (intersection.x2 - intersection.x1) * (intersection.y2 - intersection.y1)
+    given_rectangle_area = (bottom_right_x - top_left_x) * (bottom_right_y - top_left_y)
+    intersection_with_orange_ratio = intersection_rectangle_area / orange_rectangle_area
+    intersection_with_given_ratio = intersection_rectangle_area / given_rectangle_area
+
+    if intersection_with_given_ratio >= 0.12 and intersection_with_orange_ratio >= 0.4:
+        return 1  # True
+    elif intersection_with_orange_ratio < 0.2 or intersection_with_given_ratio < 0.1:
+        return 0  # False
+    return 2
+    # return (0 if (intersection_with_orange_ratio < 0.2 or intersection_with_given_ratio < 0.2) else 2
+    #         if (0.2 <= intersection_with_orange_ratio < 0.65 or 0.2 <= intersection_with_given_ratio < 0.65)
+    #         else 1)
 
 
 def crop_images(top_left_x: int, top_left_y: int, bottom_right_x: int, bottom_right_y: int, image_path: str,
@@ -128,7 +122,7 @@ def crop_images(top_left_x: int, top_left_y: int, bottom_right_x: int, bottom_ri
     cropped_image_name = "..\\cropped_images\\" + re.search(r"([^\\]+)leftImg8bit.png$", image_path).group(1)
     cropped_image_name += (('gT' if is_traffic_light else 'gF') if is_green else ('rT' if is_traffic_light else 'rF')) \
                           + "_" + number_str + ".png"
-    crop_img = cv2.resize(crop_img, dsize=(54, 140), interpolation=cv2.INTER_CUBIC)
+    crop_img = cv2.resize(crop_img, dsize=consts.CROPPED_IMAGE_SIZE, interpolation=cv2.INTER_CUBIC)
     # resized_image = crop_img.resize
     cv2.imwrite(fr"{cropped_image_name}", crop_img)
     return cropped_image_name
@@ -145,11 +139,11 @@ def get_traffic_light_rectangle(center_x: float, center_y: float, zoom: float, i
     :return: Top left point and button right point of a rectangle.
     """
     if is_green:
-        top_left_offset = {0.5: (-9, -41), 0.25: (-17, -91), 0.125: (-17, -105), 0.0625: (-17, -105)}
-        bottom_right_offset = {0.5: (8, 5), 0.25: (19, 15), 0.125: (23, 13), 0.0625: (23, 13)}
+        top_left_offset = {0.5: (-14, -46), 0.25: (-22, -96), 0.125: (-22, -110), 0.0625: (-22, -110)}
+        bottom_right_offset = {0.5: (13, 10), 0.25: (24, 20), 0.125: (28, 18), 0.0625: (28, 18)}
     else:
-        top_left_offset = {0.5: (-5, -5), 0.25: (-12, -19), 0.125: (-10, -14), 0.0625: (-20, -32)}
-        bottom_right_offset = {0.5: (5, 19), 0.25: (28, 88), 0.125: (22, 78), 0.0625: (53, 136)}
+        top_left_offset = {0.5: (-10, -10), 0.25: (-17, -24), 0.125: (-15, -19), 0.0625: (-25, -37)}
+        bottom_right_offset = {0.5: (10, 24), 0.25: (33, 93), 0.125: (27, 83), 0.0625: (58, 141)}
     value = top_left_offset.get(zoom)
     steps_to_top_left = value if value else (0, 0)
     value = bottom_right_offset.get(zoom)
