@@ -72,7 +72,10 @@ def check_rectangle_in_color_image(candidate_x: int, candidate_y: int, top_left_
     right_boundary_x = candidate_x
     colored_path = image_path.replace(consts.ORIGINAL_IMAGE_SUFFIX, consts.COLORED_IMAGE_SUFFIX)
     colored_path = colored_path.replace(consts.ORIGINAL_IMAGES_DIRECTORY, consts.COLORED_IMAGES_DIRECTORY)
+
     picture = plt.imread(colored_path)
+    # plt.imshow(picture)
+    # plt.show()
     if not (picture[candidate_y][candidate_x] == orange_color).all():
         return 0
     # finds the boundaries of the orange rectangle
@@ -83,6 +86,7 @@ def check_rectangle_in_color_image(candidate_x: int, candidate_y: int, top_left_
     orange_rectangle = Rectangle(left_boundary_x, up_boundary_y, right_boundary_x, down_boundary_y)
     crop_rectangle = Rectangle(top_left_x, top_left_y, bottom_right_x, bottom_right_y)
     intersection = orange_rectangle & crop_rectangle
+
     if intersection is None:
         return 0
     intersection_rectangle_area = (intersection.x2 - intersection.x1) * (intersection.y2 - intersection.y1)
@@ -90,7 +94,8 @@ def check_rectangle_in_color_image(candidate_x: int, candidate_y: int, top_left_
     intersection_with_orange_ratio = intersection_rectangle_area / orange_rectangle_area
     intersection_with_given_ratio = intersection_rectangle_area / given_rectangle_area
 
-    if intersection_with_given_ratio >= 0.12 and intersection_with_orange_ratio >= 0.4:
+    if (intersection_with_given_ratio >= 0.12 and intersection_with_orange_ratio >= 0.4) or \
+            (intersection_with_given_ratio >= 0.85 and intersection_with_orange_ratio >= 0.15):
         return 1  # True
     elif intersection_with_orange_ratio < 0.2 or intersection_with_given_ratio < 0.1:
         return 0  # False
